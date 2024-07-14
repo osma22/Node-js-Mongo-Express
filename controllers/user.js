@@ -1,7 +1,6 @@
 const User = require("../models/user");
 const sendemail = require("../models/email");
 const crypto = require('crypto');
-const express = require('express');
 
 
 exports.signup = async (req, res)=>{     
@@ -36,7 +35,6 @@ exports.signup = async (req, res)=>{
     }
    
 }
-
 
 exports.signin = async (req, res)=>{
 
@@ -74,20 +72,7 @@ exports.signin = async (req, res)=>{
       )
     }
 
-    req.session.user = {
-      id: user._id,
-      email: user.email
-    };
-    const token= await user.jwrtoken (); // generate a token and send it to client
-
-      //valid email & password
-    res.status(200).json(
-      {
-        success: true,
-        //user
-        token   //user id is inside token
-      }
-    )
+    generateToken(user, 200, res);  
  }
   catch(error){
     return res.status(400).json(
@@ -99,28 +84,29 @@ exports.signin = async (req, res)=>{
 }
 }
 
+const generateToken = async (user, statusCode, res) => {
+  const token= await user.jwrtoken (); // generate a token and send it to client
+
+//create options for cookie
+  const options = {
+    httpOnly: true,
+    expires: new Date(Date.now() + 3600000), // automatically logged out after 1 hour
+  };
+  res
+    .status(statusCode)
+    .cookie('token', token, options) //send token to client as a cookie   //name of cookie is 'token' and value is token
+    .json({ success: true, token });
+
+}
+
 exports.signout = async (req, res) => {
-  if (!req.session.user) {
-    return res.status(403).json({
-      success: false,
-      message: 'You are not logged in',
-    });
-  }
 
-  req.session.destroy((err) => {
-    if (err) {
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to sign out'
-      });
-    }
-      res.clearCookie('connect.sid'); // destroy the session cookie
-
-    res.status(200).json({
-      success: true,
-      message: 'Signed out successfully'
-    });
+  res.clearCookie('token');
+  res.status(200).json({
+    success: true,
+    message: 'Signed out successfully'
   });
+
 };
 
 exports.forgetpassword = async (req, res, next)=>{
@@ -210,5 +196,3 @@ res.status(200).json(
 )
 
 }
-
-
