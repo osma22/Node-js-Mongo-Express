@@ -123,6 +123,7 @@ app.post("/signout", async (req, res) =>{
         message: 'Failed to sign out'
       });
     }
+       res.clearCookie('connect.sid'); 
 
     res.redirect("/");
 
