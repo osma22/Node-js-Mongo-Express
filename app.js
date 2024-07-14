@@ -7,6 +7,7 @@ let mongoose = require("mongoose");
 bodyParser = require("body-parser");
 const crypto = require("crypto");
 const passport = require("passport"); //passport is a middleware for authentication
+const cookieParser = require("cookie-parser");
 app.use(express.json());
 app.use(express.urlencoded({ extended: false })); //for handling POST request
 app.use(bodyParser.urlencoded({ extended: true })); //for handling POST request
@@ -27,8 +28,10 @@ const sendemail = require("./models/email");
 //import Routes
 const userRoutes = require("./routes/user"); //all prorerties of router are now in userRoutes
 
+//middleware set up
 app.use(passport.initialize());
 app.use(passport.session());
+app.use(cookieParser());
 
 // MongoDB connection URL
 const url = "mongodb://localhost:27017/user";
@@ -73,11 +76,22 @@ app.post("/signup", async (req, res) => {
       password: req.body.password,
     });
     await user.save();
-    res.status(201).send("user regestered successfully");
+    res.redirect("/msg");
   } catch (err) {
     res.status(500).send("Error to regestered");
   }
 });
+
+app.get("/msg", function (req, res) {
+  res.render("msg");
+});
+
+app.post("/msg", async (req, res) =>{
+
+    res.redirect("/");
+
+  });
+
 
 app.get("/signin", function (req, res) {
   res.render("signin");
@@ -92,47 +106,40 @@ app.post("/signin", async (req, res) => {
     const isMatch = await user.comparePassword(req.body.password);
     if (!isMatch) {
       return res.status(400).send("wrong password");
-    }
-    req.session.user = { // save user info in session
-      id: user._id,
-      email: user.email
+    } 
+
+    const token= await user.jwrtoken ();
+
+    const options = {
+      httpOnly: true,
+      expires: new Date(Date.now() + 3600000), // automatically logged out after 1 hour
     };
+    res.cookie('token', token, options)
+
+    
     res.redirect("/signout");
-   // res.status(200).send("Logged in successfully");
   } catch (err) {
-    res.status(500).send("Log in failed");
+    res.status(500).send("Sign in failed");
   }
 });
+
+
+
+
 
 app.get("/signout", function (req, res) {
   res.render("signout");
 });
 
 app.post("/signout", async (req, res) =>{
-  if (!req.session.user) {
-    return res.status(403).json({
-      success: false,
-      message: 'You are not logged in',
-    });
-  }
 
-  req.session.destroy((err) => {
-    if (err) {
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to sign out'
-      });
-    }
-       res.clearCookie('connect.sid'); 
+
+  res.clearCookie('token');
 
     res.redirect("/");
 
-   /* res.status(200).json({
-      success: true,
-      message: 'Signed out successfully'
-    });*/ 
   });
-})
+
 
 
 app.get("/forgetpassword", function (req, res) {
@@ -177,6 +184,16 @@ app.post("/forgetpassword", async (req, res) => {
   }
 });
 
+app.get("/msg1", function (req, res) {
+  res.render("msg1");
+});
+
+app.post("/msg1", async (req, res) =>{
+
+    res.redirect("/");
+
+  });
+
 app.get("/resetpassword/:token", function (req, res) {
   res.render("resetpassword", { token: req.params.token });
 });
@@ -204,7 +221,7 @@ app.post("/resetpassword/:token", async (req, res) => {
     userExist.resetPasswordExpires = undefined;
     userExist.passwordChangedAt = Date.now();
     await userExist.save(); //save the user in database
-    res.status(201).send("Password updated successfully");
+    res.redirect("/msg1");
 
   } catch (err) {
     console.error(err); // Log the error for debugging
