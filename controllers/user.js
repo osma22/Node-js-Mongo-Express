@@ -114,6 +114,7 @@ exports.signout = async (req, res) => {
         message: 'Failed to sign out'
       });
     }
+      res.clearCookie('connect.sid'); // destroy the session cookie
 
     res.status(200).json({
       success: true,
