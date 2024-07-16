@@ -1,6 +1,7 @@
 const User = require("../models/user");
 const sendemail = require("../models/email");
 const crypto = require('crypto');
+const jwt = require("jsonwebtoken");
 
 
 exports.signup = async (req, res)=>{     
@@ -86,21 +87,25 @@ exports.signin = async (req, res)=>{
 
 const generateToken = async (user, statusCode, res) => {
   const token= await user.jwrtoken (); // generate a token and send it to client
+  const refresh_token= await user.refreshtoken(); // generate a refresh token and send it to client
 
 //create options for cookie
   const options = {
     httpOnly: true,
-    expires: new Date(Date.now() + 3600000), // automatically logged out after 1 hour
   };
   res
     .status(statusCode)
-    .cookie('token', token, options) //send token to client as a cookie   //name of cookie is 'token' and value is token
-    .json({ success: true, token });
+    .cookie('refreshtoken', refresh_token, options) //send token to client as a cookie   //name of cookie is 'token' and value is token
+    .cookie('token', token, options) //send token to client as a cookie   //name of cookie
+    .json({ success: true, token, refresh_token });
 
 }
 
+
+
 exports.signout = async (req, res) => {
 
+  res.clearCookie('refreshtoken');
   res.clearCookie('token');
   res.status(200).json({
     success: true,
@@ -196,3 +201,29 @@ res.status(200).json(
 )
 
 }
+exports.token = async (req, res) => {
+  const refreshToken = req.cookies.refreshtoken;
+  if (!refreshToken) {
+    return res.status(403).json({ message: "Refresh token not provided" });
+  }
+
+  try {
+    const decoded = jwt.verify(refreshToken, 'osmanganimehidy');
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(404).send({ message: "User not found" });
+    }
+
+    generateToken(user, 200, res);  
+
+    res.clearCookie('refreshtoken');
+
+
+  
+  }
+   
+   catch (err) {
+    console.log(err);
+    res.status(403).json({ message: "Invalid refresh token" });
+  }
+};
