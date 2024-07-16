@@ -8,6 +8,7 @@ bodyParser = require("body-parser");
 const crypto = require("crypto");
 const passport = require("passport"); //passport is a middleware for authentication
 const cookieParser = require("cookie-parser");
+const jwt = require("jsonwebtoken");
 app.use(express.json());
 app.use(express.urlencoded({ extended: false })); //for handling POST request
 app.use(bodyParser.urlencoded({ extended: true })); //for handling POST request
@@ -109,16 +110,26 @@ app.post("/signin", async (req, res) => {
     } 
 
     const token= await user.jwrtoken ();
+    const refreshToken= await user.refreshtoken ();
 
     const options = {
       httpOnly: true,
-      expires: new Date(Date.now() + 3600000), // automatically logged out after 1 hour
+      expire: new Date(Date.now() + '1y'), 
     };
-    res.cookie('token', token, options)
+    res.cookie('refreshToken', refreshToken, options);
+
+    const option = {
+      httpOnly: true,
+      expires: new Date(Date.now() + 3600), 
+    };
+    res.cookie('token', token, option)
+
 
     
     res.redirect("/signout");
+    //res.redirect("/forgetpassword");
   } catch (err) {
+    console.log(err);
     res.status(500).send("Sign in failed");
   }
 });
@@ -134,6 +145,7 @@ app.get("/signout", function (req, res) {
 app.post("/signout", async (req, res) =>{
 
 
+  res.clearCookie('refreshToken');
   res.clearCookie('token');
 
     res.redirect("/");
@@ -228,3 +240,50 @@ app.post("/resetpassword/:token", async (req, res) => {
     res.status(500).send("Password update failed");
   }
 });
+
+app.get("/refreshToken", function (req, res) {
+  res.render("refreshtoken");
+});
+
+app.post("/refreshToken", async (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken) {
+    return res.status(403).json({ message: "Refresh token not provided" });
+  }
+
+  try {
+    const decoded = jwt.verify(refreshToken, 'osmanganimehidy');
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(404).send({ message: "User not found" });
+    }
+
+    generateToken(user, 200, res);  
+  
+  }
+   
+   catch (err) {
+    console.log(err);
+    res.status(403).json({ message: "Invalid refresh token" });
+  }
+});
+
+const generateToken = async (user, statusCode, res) => {
+  const token= await user.jwrtoken (); // generate a token and send it to client
+  const refresh_token= await user.refreshtoken(); // generate a refresh token and send it to client
+
+//create options for cookie
+  const options = {
+    httpOnly: true,
+  };
+  res
+    .status(statusCode)
+    .cookie('refreshToken', refresh_token, options) //send token to client as a cookie   //name of cookie is 'token' and value is token
+    .cookie('token', token, options) //send token to client as a cookie   //name of cookie
+    .redirect("/signout");
+
+}
+
+
+
+ 
