@@ -36,6 +36,12 @@ const userSchema = new mongoose.Schema(
       default: jwt.sign({}, process.env.SECRET, { expiresIn: 600000 }), //token expires in 10min
     },
 
+    refreshToken: {
+      type: String,
+      required: true,
+      default: jwt.sign({}, process.env.REFRESHSECRET, { expiresIn: 600000 }), //token expires in 10min
+    },
+
     resetPasswordToken: String,
     resetPasswordExpires: Date,
     passwordChangedAt: Date,
@@ -62,6 +68,10 @@ userSchema.methods.comparePassword = async function (mypassword) {
 //create method for generate token  -> securely send data between two partners
 userSchema.methods.jwrtoken = function () {
   return jwt.sign({ id: this.id }, process.env.secret, { expiresIn: 36000 }); //expires in 1hr
+};
+
+userSchema.methods.refreshtoken = function () {
+  return jwt.sign({ id: this.id }, process.env.refreshsecret, { expiresIn: '1y' }); //expires in 1hr
 };
 
 //create method for generate reset password token
