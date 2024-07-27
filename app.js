@@ -7,6 +7,7 @@ let mongoose = require("mongoose");
 bodyParser = require("body-parser");
 const crypto = require("crypto");
 const passport = require("passport"); //passport is a middleware for authentication
+const GoogleStrategy = require( 'passport-google-oauth2' ).Strategy;
 const cookieParser = require("cookie-parser");
 const jwt = require("jsonwebtoken");
 app.use(express.json());
@@ -19,15 +20,17 @@ app.use(
   require("express-session")({
     secret: process.env.secret,
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: true,
   })
 );
 
+require("./auth");
 app.set("view engine", "ejs");
 const User = require("./models/user");
 const sendemail = require("./models/email");
 //import Routes
 const userRoutes = require("./routes/user"); //all prorerties of router are now in userRoutes
+
 
 //middleware set up
 app.use(passport.initialize());
@@ -36,7 +39,7 @@ app.use(cookieParser());
 
 // MongoDB connection URL
 const url = "mongodb://localhost:27017/user";
-let db;
+//let db;
 
 // Connect to MongoDB
 mongoose.connect(
@@ -60,6 +63,12 @@ const port = process.env.port || 5000;
 app.listen(port, () => {
   console.log(`App is running on port ${port}`);
 });
+
+
+function isLoggedIn(req, res, next) 
+{
+  req.user ? next() : res.sendStatus(401);
+}
 
 app.get("/", (req, res) => {
   res.render("home");
@@ -93,6 +102,24 @@ app.post("/msg", async (req, res) =>{
 
   });
 
+  app.get("/auth/google",
+    passport.authenticate('google', { scope:
+      [ 'email', 'profile' ] }
+  ));
+
+  app.get( '/auth/google/callback',
+    passport.authenticate( 'google', {
+        successRedirect: '/auth/google/protected',
+        failureRedirect: '/auth/google/failure'
+}))
+  
+   app.get("/auth/google/failure", (req, res) => {
+       res.send('Failed to authenticate with Google');
+   });
+  
+   app.get("/protected", isLoggedIn, (req, res) => {
+       res.send('You have successfully authenticated with Google!');
+   });
 
 app.get("/signin", function (req, res) {
   res.render("signin");
@@ -286,4 +313,5 @@ const generateToken = async (user, statusCode, res) => {
 
 
 
- 
+
+
