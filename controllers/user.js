@@ -27,10 +27,11 @@ exports.signup = async (req, res)=>{
         
     } catch (error) {
         return res.status(500).json(
-          {
+          /*{
             success: false,
             message: "Server Error"
-          }
+          }*/
+         console.log(error)
         )
         
     }
