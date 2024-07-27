@@ -279,7 +279,7 @@ app.post("/refreshToken", async (req, res) => {
   }
 
   try {
-    const decoded = jwt.verify(refreshToken, 'osmanganimehidy');
+    const decoded = jwt.verify(refreshToken, 'osmanganimehidy2');
     const user = await User.findById(decoded.id);
     if (!user) {
       return res.status(404).send({ message: "User not found" });
