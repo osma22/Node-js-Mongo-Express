@@ -1,0 +1,32 @@
+version: "3"
+
+services:
+  #MongoDB
+  mongo_db:
+    container_name: database_container
+    image: mongo:latest
+    restart: always
+    volumes:
+      - mongo_db:/data/db
+
+  app:
+    build: .
+    ports:
+      - 4000:5000
+    environment:
+      port: 5000
+      secret: kaziosmanmehidy2
+      refreshsecret: osmanganimehidy2
+      email_user: 8f4c2c3c4ac9d1
+      email_pass: a8ab8140938968
+      email_host: sandbox.smtp.mailtrap.io
+      email_port: 2525
+      GOOGLE_CLIENT_ID: 57981166387-klhfp68jtucpej5fdq7gk8t0ovh1o86v.apps.googleusercontent.com
+      GOOGLE_CLIENT_SECRET: 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
+      googleOauthRedirectUrl: "https://bd.linkedin.com/callback"
+
+    depends_on:
+      - mongo_db
+
+volumes:
+  mongo_db: {}
