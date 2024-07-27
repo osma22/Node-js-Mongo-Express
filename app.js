@@ -7,6 +7,9 @@ let mongoose = require("mongoose");
 bodyParser = require("body-parser");
 const crypto = require("crypto");
 const passport = require("passport"); //passport is a middleware for authentication
+const GoogleStrategy = require( 'passport-google-oauth2' ).Strategy;
+const cookieParser = require("cookie-parser");
+const jwt = require("jsonwebtoken");
 app.use(express.json());
 app.use(express.urlencoded({ extended: false })); //for handling POST request
 app.use(bodyParser.urlencoded({ extended: true })); //for handling POST request
@@ -17,22 +20,26 @@ app.use(
   require("express-session")({
     secret: process.env.secret,
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: true,
   })
 );
 
+require("./auth");
 app.set("view engine", "ejs");
 const User = require("./models/user");
 const sendemail = require("./models/email");
 //import Routes
 const userRoutes = require("./routes/user"); //all prorerties of router are now in userRoutes
 
+
+//middleware set up
 app.use(passport.initialize());
 app.use(passport.session());
+app.use(cookieParser());
 
 // MongoDB connection URL
 const url = "mongodb://localhost:27017/user";
-let db;
+//let db;
 
 // Connect to MongoDB
 mongoose.connect(
@@ -57,6 +64,12 @@ app.listen(port, () => {
   console.log(`App is running on port ${port}`);
 });
 
+
+function isLoggedIn(req, res, next) 
+{
+  req.user ? next() : res.sendStatus(401);
+}
+
 app.get("/", (req, res) => {
   res.render("home");
 });
@@ -73,11 +86,40 @@ app.post("/signup", async (req, res) => {
       password: req.body.password,
     });
     await user.save();
-    res.status(201).send("user regestered successfully");
+    res.redirect("/msg");
   } catch (err) {
     res.status(500).send("Error to regestered");
   }
 });
+
+app.get("/msg", function (req, res) {
+  res.render("msg");
+});
+
+app.post("/msg", async (req, res) =>{
+
+    res.redirect("/");
+
+  });
+
+  app.get("/auth/google",
+    passport.authenticate('google', { scope:
+      [ 'email', 'profile' ] }
+  ));
+
+  app.get( '/auth/google/callback',
+    passport.authenticate( 'google', {
+        successRedirect: '/auth/google/protected',
+        failureRedirect: '/auth/google/failure'
+}))
+  
+   app.get("/auth/google/failure", (req, res) => {
+       res.send('Failed to authenticate with Google');
+   });
+  
+   app.get("/protected", isLoggedIn, (req, res) => {
+       res.send('You have successfully authenticated with Google!');
+   });
 
 app.get("/signin", function (req, res) {
   res.render("signin");
@@ -92,47 +134,51 @@ app.post("/signin", async (req, res) => {
     const isMatch = await user.comparePassword(req.body.password);
     if (!isMatch) {
       return res.status(400).send("wrong password");
-    }
-    req.session.user = { // save user info in session
-      id: user._id,
-      email: user.email
+    } 
+
+    const token= await user.jwrtoken ();
+    const refreshToken= await user.refreshtoken ();
+
+    const options = {
+      httpOnly: true,
+      expire: new Date(Date.now() + '1y'), 
     };
+    res.cookie('refreshToken', refreshToken, options);
+
+    const option = {
+      httpOnly: true,
+      expires: new Date(Date.now() + 3600), 
+    };
+    res.cookie('token', token, option)
+
+
+    
     res.redirect("/signout");
-   // res.status(200).send("Logged in successfully");
+    //res.redirect("/forgetpassword");
   } catch (err) {
-    res.status(500).send("Log in failed");
+    console.log(err);
+    res.status(500).send("Sign in failed");
   }
 });
+
+
+
+
 
 app.get("/signout", function (req, res) {
   res.render("signout");
 });
 
 app.post("/signout", async (req, res) =>{
-  if (!req.session.user) {
-    return res.status(403).json({
-      success: false,
-      message: 'You are not logged in',
-    });
-  }
 
-  req.session.destroy((err) => {
-    if (err) {
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to sign out'
-      });
-    }
-       res.clearCookie('connect.sid'); 
+
+  res.clearCookie('refreshToken');
+  res.clearCookie('token');
 
     res.redirect("/");
 
-   /* res.status(200).json({
-      success: true,
-      message: 'Signed out successfully'
-    });*/ 
   });
-})
+
 
 
 app.get("/forgetpassword", function (req, res) {
@@ -177,6 +223,16 @@ app.post("/forgetpassword", async (req, res) => {
   }
 });
 
+app.get("/msg1", function (req, res) {
+  res.render("msg1");
+});
+
+app.post("/msg1", async (req, res) =>{
+
+    res.redirect("/");
+
+  });
+
 app.get("/resetpassword/:token", function (req, res) {
   res.render("resetpassword", { token: req.params.token });
 });
@@ -204,10 +260,58 @@ app.post("/resetpassword/:token", async (req, res) => {
     userExist.resetPasswordExpires = undefined;
     userExist.passwordChangedAt = Date.now();
     await userExist.save(); //save the user in database
-    res.status(201).send("Password updated successfully");
+    res.redirect("/msg1");
 
   } catch (err) {
     console.error(err); // Log the error for debugging
     res.status(500).send("Password update failed");
   }
 });
+
+app.get("/refreshToken", function (req, res) {
+  res.render("refreshtoken");
+});
+
+app.post("/refreshToken", async (req, res) => {
+  const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken) {
+    return res.status(403).json({ message: "Refresh token not provided" });
+  }
+
+  try {
+    const decoded = jwt.verify(refreshToken, 'osmanganimehidy');
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(404).send({ message: "User not found" });
+    }
+
+    generateToken(user, 200, res);  
+  
+  }
+   
+   catch (err) {
+    console.log(err);
+    res.status(403).json({ message: "Invalid refresh token" });
+  }
+});
+
+const generateToken = async (user, statusCode, res) => {
+  const token= await user.jwrtoken (); // generate a token and send it to client
+  const refresh_token= await user.refreshtoken(); // generate a refresh token and send it to client
+
+//create options for cookie
+  const options = {
+    httpOnly: true,
+  };
+  res
+    .status(statusCode)
+    .cookie('refreshToken', refresh_token, options) //send token to client as a cookie   //name of cookie is 'token' and value is token
+    .cookie('token', token, options) //send token to client as a cookie   //name of cookie
+    .redirect("/signout");
+
+}
+
+
+
+
+
