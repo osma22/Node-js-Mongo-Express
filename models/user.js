@@ -67,11 +67,11 @@ userSchema.methods.comparePassword = async function (mypassword) {
 
 //create method for generate token  -> securely send data between two partners
 userSchema.methods.jwrtoken = function () {
-  return jwt.sign({ id: this.id }, process.env.secret, { expiresIn: 36000 }); //expires in 1hr
+  return jwt.sign({ id: this.id }, process.env.SECRET, { expiresIn: 36000 }); //expires in 1hr
 };
 
 userSchema.methods.refreshtoken = function () {
-  return jwt.sign({ id: this.id }, process.env.refreshsecret, { expiresIn: '1y' }); //expires in 1hr
+  return jwt.sign({ id: this.id }, process.env.REFRESHSECRET, { expiresIn: '1y' }); //expires in 1hr
 };
 
 //create method for generate reset password token
