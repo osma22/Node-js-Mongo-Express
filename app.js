@@ -18,7 +18,7 @@ app.use(cors());
 //passport middleware
 app.use(                                
   require("express-session")({
-    secret: process.env.secret,
+    secret: process.env.SECRET,
     resave: false,
     saveUninitialized: true,
   })
@@ -38,7 +38,7 @@ app.use(passport.session());
 app.use(cookieParser());
 
 // MongoDB connection URL
-const url = "mongodb://localhost:27017/user";
+const url = "mongodb://mongo_db:27017/user";
 //let db;
 
 // Connect to MongoDB
@@ -310,7 +310,6 @@ const generateToken = async (user, statusCode, res) => {
     .redirect("/signout");
 
 }
-
 
 
 
