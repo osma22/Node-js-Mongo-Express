@@ -1,9 +1,62 @@
 <h1>SignIn</h1>
-<form action="/signin" method="post">
+<form id="signinForm" action="/signin" method="post">
     <label for="email">Email:</label>
     <input type="email" id="email" name="email" required><br><br>
+    <span id="email-exists-message" style="color: red; display: none;">Email does not exist</span><br>
     <label for="password">Password:</label>
     <input type="password" id="password" name="password" required><br><br>
+    <span id="password-error" style="color: red; display: none;">Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.</span><br>
     <input type="submit" value="Signin">
     <p>Forgot Password? <a href="/forgetpassword">Forget password</a></p>
-    </form>
+</form>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script>
+  $(document).ready(function() {
+    $('#email').on('blur', function() {
+      const email = $(this).val();
+
+      if (email !== '') {
+        $.ajax({
+          url: '/email-check',
+          type: 'POST',
+          contentType: 'application/json',
+          data: JSON.stringify({ email: email }),
+          success: function(response) {
+            if (response.exists) {
+              $('#email-exists-message').hide();
+            } else {
+              $('#email-exists-message').html('<span class="badge bg-danger">Email does not exist</span>').show();
+            }
+          },
+          error: function() {
+            console.error('Error checking email availability');
+          }
+        });
+      } else {
+        $('#email-exists-message').hide();
+      }
+    });
+
+    $('#password').keyup(function() {
+      var password = $('#password').val();
+      var regexp = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+      if (regexp.test(password)) {
+        $('#password').closest('.form-group').removeClass('has-error').addClass('has-success');
+        $('#password-error').hide();
+      } else {
+        $('#password').closest('.form-group').removeClass('has-success').addClass('has-error');
+        $('#password-error').show();
+      }
+    });
+
+    $('#signinForm').on('submit', function(event) {
+      var passwordRegexp = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+      if (!passwordRegexp.test($('#password').val())) {
+        event.preventDefault(); // Prevent form submission
+        $('#password-error').show();
+      }
+    });
+  });
+</script>
