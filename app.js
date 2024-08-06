@@ -39,6 +39,7 @@ app.use(cookieParser());
 
 // MongoDB connection URL
 const url = "mongodb://mongo_db:27017/user";
+//const url = "mongodb://localhost:27017/user";
 //let db;
 
 // Connect to MongoDB
@@ -80,10 +81,25 @@ app.get("/signup", function (req, res) {
 
 app.post("/signup", async (req, res) => {
   try {
+    const { name, email, password } = req.body;
+
+    // Server-side validation for name
+    const nameRegexp = /^[a-zA-Z ]+$/;
+    if (!nameRegexp.test(name)) {
+      return res.status(400).send('Name must contain only alphabets and spaces');
+    }
+
+    // Server-side validation for password
+    const passwordRegexp = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegexp.test(password)) {
+      return res.status(400).send('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.');
+    }
+
     const user = await new User({
       name: req.body.name,
       email: req.body.email,
       password: req.body.password,
+      
     });
     await user.save();
     res.redirect("/msg");
@@ -120,6 +136,22 @@ app.post("/msg", async (req, res) =>{
    app.get("/protected", isLoggedIn, (req, res) => {
        res.send('You have successfully authenticated with Google!');
    });
+
+   app.post('/email-check', async (req, res) => {
+    const { email } = req.body;
+    try {
+        const user = await User.findOne({ email: email });
+        if (user) {
+            return res.json({ exists: true });
+        } else {
+            return res.json({ exists: false });
+        }
+    } catch (error) {
+        console.error('Error checking email:', error);
+        return res.status(500).json({ exists: false });
+    }
+});
+
 
 app.get("/signin", function (req, res) {
   res.render("signin");
