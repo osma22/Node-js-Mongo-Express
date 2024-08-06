@@ -1,14 +1,84 @@
 <h1>Sign Up</h1>
-<form action="/signup" method="post">
+<form id="signupForm" action="/signup" method="post">
     <label for="name">Name:</label>
     <input type="text" id="name" name="name" required><br><br>
+    <span id="name-error" style="color: red; display: none;">Name must contain only alphabets and spaces</span><br>
     <label for="email">Email:</label>
     <input type="email" id="email" name="email" required><br><br>
+    <span id="email-exists-message" style="color: red; display: none;">Email already exists</span><br>
     <label for="password">Password:</label>
     <input type="password" id="password" name="password" required><br><br>
+    <span id="password-error" style="color: red; display: none;">Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character.</span><br>
     <input type="submit" value="Sign Up">
     <input type="reset" value="Reset">
     <p>Already have an account? <a href="/signin">Signin</a></p>
+    <li><a href="/auth/google">Sign up with google</a></li>
 </form>
- 
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script>
+  $(document).ready(function() {
+    $('#name').keyup(function() {
+      var regexp = /^[a-zA-Z ]+$/;
+      if (regexp.test($('#name').val())) {
+        $('#name').closest('.form-group').removeClass('has-error').addClass('has-success');
+        $('#name-error').hide();
+      } else {
+        $('#name').closest('.form-group').removeClass('has-success').addClass('has-error');
+        $('#name-error').show();
+      }
+    });
+
+    $('#email').on('blur', function() {
+      const email = $(this).val();
+
+      if (email !== '') {
+        $.ajax({
+          url: '/email-check',
+          type: 'POST',
+          contentType: 'application/json',
+          data: JSON.stringify({ email: email }),
+          success: function(response) {
+            if (response.exists) {
+              $('#email-exists-message').html('<span class="badge bg-danger">Email is already in use</span>').show();
+            } else {
+              $('#email-exists-message').hide();
+            }
+          },
+          error: function() {
+            console.error('Error checking email availability');
+          }
+        });
+      } else {
+        $('#email-exists-message').hide();
+      }
+    });
+
+    $('#password').keyup(function() {
+      var password = $('#password').val();
+      var regexp = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+      if (regexp.test(password)) {
+        $('#password').closest('.form-group').removeClass('has-error').addClass('has-success');
+        $('#password-error').hide();
+      } else {
+        $('#password').closest('.form-group').removeClass('has-success').addClass('has-error');
+        $('#password-error').show();
+      }
+    });
+
+    $('#signupForm').on('submit', function(event) {
+      var nameRegexp = /^[a-zA-Z ]+$/;
+      var passwordRegexp = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+      if (!nameRegexp.test($('#name').val())) {
+        event.preventDefault(); // Prevent form submission
+        $('#name-error').show();
+      }
+
+      if (!passwordRegexp.test($('#password').val())) {
+        event.preventDefault(); // Prevent form submission
+        $('#password-error').show();
+      }
+    });
+  });
+</script>
