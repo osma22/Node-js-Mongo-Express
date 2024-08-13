@@ -1,0 +1,15 @@
+<h1>User List</h1>
+
+<% if (users_info.length > 0) { %>
+    <% users_info.forEach(function(user, index) { %>
+        <div class="user-container">
+            <p><strong>Name:</strong> <%= user.name %></p>
+            <p><strong>Email:</strong> <%= user.email %></p>
+            <p><strong>Phone Number:</strong> <%= user.phoneNumber %></p>
+            <p><strong>Address:</strong> <%= user.address %></p>
+            <br><br>
+        </div>
+    <% }); %>
+<% } else { %>
+    <p>No users found</p>
+<% } %>
