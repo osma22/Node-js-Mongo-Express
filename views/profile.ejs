@@ -11,6 +11,8 @@
   <%= user.phoneNumber %><br>
   <label for="address">Address:</label>
   <%= user.address %><br>
-  <br><br>  <button type="submit" name="action" value="update">Update</button>
+  <br><br> 
+  <button type="submit" name="action" value="update">Update</button>
   <button type="submit" name="action" value="signout">Sign Out</button>
+  <button type="submit" name="action" value="delete" onclick="return confirm('Are you sure you want to delete your account?');">Delete Account</button> 
 </form>
