@@ -1,0 +1,16 @@
+<h1>User Profile</h1>
+<form action="/profile" method="post">
+  <% if (user.picture) { %>
+    <br><img src="<%= user.picture %>" alt="Profile Picture" style="width:150px; height:150px;"><br>
+  <% } %>
+  <label for="name">Name:</label>
+  <%= user.name %><br>
+  <label for="email">Email:</label>
+  <%= user.email %><br>
+  <label for="phoneNumber">Mobile:</label>
+  <%= user.phoneNumber %><br>
+  <label for="address">Address:</label>
+  <%= user.address %><br>
+  <br><br>  <button type="submit" name="action" value="update">Update</button>
+  <button type="submit" name="action" value="signout">Sign Out</button>
+</form>
