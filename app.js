@@ -312,11 +312,33 @@ app.post("/profile", async (req, res) => {
   
   if (action === "update") {
     return res.redirect("/update-profile");
+  } else if (action === "delete") {
+    try {
+      const refreshToken = req.cookies.refreshToken;
+      if (!refreshToken) {
+        return res.status(403).json({ message: "Refresh token not provided" });
+      }
+
+      const decoded = jwt.verify(refreshToken, "osmanganimehidy2");
+      const user = await User.findById(decoded.id);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      await User.findByIdAndDelete(decoded.id);
+      res.clearCookie("connect.sid");
+      res.clearCookie("refreshToken");
+      res.clearCookie("token");
+      return res.redirect("/signup");
+    } catch (err) {
+      console.log(err);
+      return res.status(500).send("Error deleting account");
+    }
   }
 
-      return res.redirect("/signout");
-    });
-
+  return res.redirect("/signout");
+});
 
 
 app.get("/update-profile", fetchUser, function (req, res) {
@@ -344,7 +366,7 @@ app.post("/update-profile", upload.single("picture"), async (req, res) => {
   await user.save();
   res.redirect("/profile");
 
-
+    
   } catch (err) {
     console.log(err);
     res.status(500).send("Error updating profile");
@@ -472,6 +494,11 @@ app.post("/refreshToken", async (req, res) => {
     res.status(403).json({ message: "Invalid refresh token" });
   }
 });
+
+app.get("/delete", function (req, res) {
+  res.render("delete");
+});
+
 
 const generateToken = async (user, statusCode, res) => {
   const token = await user.jwrtoken(); // generate a token and send it to client
